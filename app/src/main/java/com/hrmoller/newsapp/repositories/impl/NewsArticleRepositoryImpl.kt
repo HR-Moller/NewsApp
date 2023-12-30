@@ -25,7 +25,7 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
 
             when (res.isSuccessful) {
                 true -> {
-                    _articles.value = res.body()?.articles!!.toMutableList()
+                    _articles.value = res.body()?.articles!!.filter { it.title != "[Removed]" }.toMutableList()
                     lastRetrievedPage++
                     result = NewsArticleResult.Success
                 }
@@ -56,7 +56,7 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
 
             when (res.isSuccessful) {
                 true -> {
-                    _articles.value += res.body()?.articles!!.toMutableList()
+                    _articles.value += res.body()?.articles!!.filter { it.title != "[Removed]" }.toMutableList()
                     lastRetrievedPage++
                     result = NewsArticleResult.Success
                 }
@@ -75,6 +75,13 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
         catch (e: Exception) {
             result = NewsArticleResult.Error(e.message.orEmpty())
             result
+        }
+    }
+
+    override suspend fun getArticleByIndex(index: Int): Result<Article> {
+        return when (val art = _articles.value.getOrNull(index)) {
+            null -> Result.failure(Exception("Article Not Found"))
+            else -> Result.success(art)
         }
     }
 }

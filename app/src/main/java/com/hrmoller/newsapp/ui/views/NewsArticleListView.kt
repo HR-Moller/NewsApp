@@ -1,19 +1,16 @@
 package com.hrmoller.newsapp.ui.views
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -24,11 +21,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -36,18 +31,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hrmoller.newsapp.R
 import com.hrmoller.newsapp.models.Article
 import com.hrmoller.newsapp.models.Source
+import com.hrmoller.newsapp.ui.LoadingIndicator
 import com.hrmoller.newsapp.ui.theme.Typography
 import com.hrmoller.newsapp.viewmodels.NewsArticleListState
 import com.hrmoller.newsapp.viewmodels.NewsArticleListViewModel
 import java.text.SimpleDateFormat
 
 @Composable
-fun NewsArticleListView(viewModel: NewsArticleListViewModel = hiltViewModel()) {
+fun NewsArticleListView(viewModel: NewsArticleListViewModel = hiltViewModel(), navController: NavHostController) {
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
@@ -60,6 +57,7 @@ fun NewsArticleListView(viewModel: NewsArticleListViewModel = hiltViewModel()) {
             snackbarHostState = snackbarHostState,
             listState = listState,
             it,
+            navController,
             onEndReached = viewModel::onEndReached
         )
     }
@@ -71,12 +69,13 @@ private fun NewsArticleListViewContent(
     snackbarHostState: SnackbarHostState,
     listState: LazyListState,
     padding: PaddingValues,
+    navController: NavHostController,
     onEndReached: () -> Unit
 ) {
     if (state.isLoading) LoadingIndicator()
     when {
         state.data.isNotEmpty() -> NewsArticleList(
-            articles = state.data, listState, onEndReached
+            articles = state.data, listState, navController = navController, onEndReached
         )
     }
     if (state.error) {
@@ -86,25 +85,20 @@ private fun NewsArticleListViewContent(
     }
 }
 
-@Composable
-private fun LoadingIndicator() {
-    Box(contentAlignment = Alignment.Center, modifier = Modifier
-        .fillMaxSize()
-        .background(Color.Transparent)) {
-        CircularProgressIndicator(
-            modifier = Modifier.requiredSize(48.dp)
-        )
-    }
-}
 
 @Composable
-private fun NewsArticleList(articles: List<Article>, listState: LazyListState, onEndReached: () -> Unit) {
+private fun NewsArticleList(
+    articles: List<Article>,
+    listState: LazyListState,
+    navController: NavHostController,
+    onEndReached: () -> Unit
+) {
 
     LazyColumn(
         state = listState, modifier = Modifier.fillMaxSize()
     ) {
         items(articles) {
-            ArticleListItem(article = it, articles.indexOf(it))
+            ArticleListItem(article = it, articles.indexOf(it), navController = navController)
             if (articles.indexOf(it) == articles.count() - 1) {
                 LaunchedEffect(key1 = articles.count()) {
                     onEndReached()
@@ -116,13 +110,14 @@ private fun NewsArticleList(articles: List<Article>, listState: LazyListState, o
 
 @SuppressLint("SimpleDateFormat")
 @Composable
-private fun ArticleListItem(article: Article, index: Int) {
+private fun ArticleListItem(article: Article, index: Int, navController: NavHostController) {
     ListItem(modifier = Modifier
         .padding(16.dp, 4.dp)
         .shadow(8.dp, shape = RoundedCornerShape(8.dp))
         .clip(
             RoundedCornerShape(8.dp)
-        ), headlineContent = {
+        )
+        .clickable { navController.navigate("ArticleDetail/$index") }, headlineContent = {
         ItemTitle(title = article.title)
     }, supportingContent = {
         Column {
@@ -141,6 +136,7 @@ fun ItemImage(url: String) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current).data(url).crossfade(true).build(),
         contentDescription = "Article Image",
+        error = painterResource(R.drawable.istockphoto_1147544807_612x612),
         fallback = painterResource(R.drawable.istockphoto_1147544807_612x612),
         placeholder = painterResource(R.drawable.istockphoto_1147544807_612x612),
         contentScale = ContentScale.Inside,
@@ -186,5 +182,5 @@ fun NewsArticleListPreview() {
             url = "https://duckduckgo.com/?q=sonet",
             urlToImage = null
         )
-    ), LazyListState(), onEndReached = {})
+    ), LazyListState(), navController = NavHostController(LocalContext.current), onEndReached = {})
 }

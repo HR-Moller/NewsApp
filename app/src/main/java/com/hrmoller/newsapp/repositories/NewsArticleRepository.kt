@@ -9,4 +9,5 @@ interface NewsArticleRepository {
     val articles: StateFlow<List<Article>>
     suspend fun fetchTopHeadlines(): NewsArticleResult
     suspend fun fetchAdditionalTopHeadlines(): NewsArticleResult
+    suspend fun getArticleByIndex(index: Int): Result<Article>
 }
