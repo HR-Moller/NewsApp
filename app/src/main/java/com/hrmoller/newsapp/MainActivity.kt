@@ -21,6 +21,16 @@ class MainActivity : ComponentActivity() {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     val navController = rememberNavController()
                     NewsArticleNavHost(navController = navController, startDestination = "ArticleList")
+
+                    /*val crashButton = Button(this)
+                    crashButton.text = "Test Crash"
+                    crashButton.setOnClickListener {
+                        throw RuntimeException("Test Crash") // Force a crash
+                    }
+
+                    addContentView(crashButton, ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT))*/
                 }
             }
         }
