@@ -23,7 +23,7 @@ class NewsArticleListViewModel @Inject constructor(private val newsArticleReposi
                 is NewsArticleResult.Success -> _state.value = _state.value.copy(isLoading = false)
             }
             newsArticleRepository.articles.collect { value ->
-                _state.value = _state.value.copy(data = value.filter { it.title != "[Removed]" })
+                _state.value = _state.value.copy(data = value)
             }
         }
     }

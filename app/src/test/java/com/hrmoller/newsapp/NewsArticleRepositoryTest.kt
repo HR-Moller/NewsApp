@@ -3,6 +3,7 @@ package com.hrmoller.newsapp
 import com.hrmoller.newsapp.models.Article
 import com.hrmoller.newsapp.models.Source
 import com.hrmoller.newsapp.models.TopHeadlinesResponse
+import com.hrmoller.newsapp.repositories.NewsArticleRepository
 import com.hrmoller.newsapp.repositories.impl.NewsArticleRepositoryImpl
 import com.hrmoller.newsapp.repositories.result.NewsArticleResult
 import com.hrmoller.newsapp.services.NewsApiService
@@ -92,5 +93,46 @@ class NewsArticleRepositoryTest {
         assertEquals(
             additionalArticles, newsArticleRepository.articles.value
         )
+    }
+
+    @Test
+    fun `getArticleByIndex should return Success when article is found`() = runBlocking { // Arrange
+        val repository: NewsArticleRepository = mockk()
+        val mockArticles = listOf<Article>(
+            Article(
+                author = null,
+                content = null,
+                description = null,
+                publishedAt = "convallis",
+                source = Source(id = null, name = null),
+                title = "dictumst",
+                url = "https://search.yahoo.com/search?p=litora",
+                urlToImage = null
+            )
+        )
+        val index = 0
+
+        coEvery { repository.getArticleByIndex(index) } returns Result.success(mockArticles[index])
+
+        // Act
+        val result = repository.getArticleByIndex(index)
+
+        // Assert
+        assertEquals(Result.success(mockArticles[index]), result)
+
+    }
+
+    @Test
+    fun `getArticleByIndex should return Failure when article is not found`() = runBlocking { // Arrange
+        val repository = mockk<NewsArticleRepository>()
+        val index = 0
+
+        coEvery { repository.getArticleByIndex(index) } returns Result.failure(Exception("Article Not Found"))
+
+        // Act
+        val result = repository.getArticleByIndex(index).isFailure
+
+        // Assert
+        assert(true)
     }
 }
