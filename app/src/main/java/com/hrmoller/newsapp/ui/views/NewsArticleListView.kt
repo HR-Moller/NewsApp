@@ -1,16 +1,25 @@
+@file:OptIn(ExperimentalMaterialApi::class, ExperimentalMaterialApi::class)
+
 package com.hrmoller.newsapp.ui.views
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.PullRefreshState
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -20,10 +29,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -44,10 +54,14 @@ import com.hrmoller.newsapp.viewmodels.NewsArticleListViewModel
 import java.text.SimpleDateFormat
 
 @Composable
-fun NewsArticleListView(viewModel: NewsArticleListViewModel = hiltViewModel(), navController: NavHostController) {
+fun NewsArticleListView(
+    viewModel: NewsArticleListViewModel = hiltViewModel(),
+    navController: NavHostController,
+    snackbarHostState: SnackbarHostState
+) {
     val state by viewModel.state.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     val listState = rememberLazyListState()
+    val pullRefreshState = rememberPullRefreshState(refreshing = state.isRefreshing, onRefresh = viewModel::onRefresh)
 
     Scaffold(snackbarHost = {
         SnackbarHost(hostState = snackbarHostState)
@@ -56,8 +70,9 @@ fun NewsArticleListView(viewModel: NewsArticleListViewModel = hiltViewModel(), n
             state = state,
             snackbarHostState = snackbarHostState,
             listState = listState,
-            it,
-            navController,
+            pullRefreshState = pullRefreshState,
+            padding = it,
+            navController = navController,
             onEndReached = viewModel::onEndReached
         )
     }
@@ -69,20 +84,37 @@ private fun NewsArticleListViewContent(
     snackbarHostState: SnackbarHostState,
     listState: LazyListState,
     padding: PaddingValues,
+    pullRefreshState: PullRefreshState,
     navController: NavHostController,
     onEndReached: () -> Unit
 ) {
     if (state.isLoading) LoadingIndicator()
     when {
-        state.data.isNotEmpty() -> NewsArticleList(
-            articles = state.data, listState, navController = navController, onEndReached
-        )
+        state.data.isNotEmpty() ->
+
+            Box() {
+                NewsArticleList(
+                    articles = state.data,
+                    listState,
+                    navController = navController,
+                    pullRefreshState = pullRefreshState,
+                    onEndReached = onEndReached
+                )
+
+                PullRefreshIndicator(
+                    refreshing = state.isLoading,
+                    state = pullRefreshState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    backgroundColor = if (state.isRefreshing) Color.Red else Color.Green,
+                )
+            }
     }
     if (state.error) {
         LaunchedEffect(snackbarHostState) {
             snackbarHostState.showSnackbar(message = state.errorMessage.orEmpty())
         }
     }
+
 }
 
 
@@ -90,12 +122,14 @@ private fun NewsArticleListViewContent(
 private fun NewsArticleList(
     articles: List<Article>,
     listState: LazyListState,
+    pullRefreshState: PullRefreshState,
     navController: NavHostController,
     onEndReached: () -> Unit
 ) {
-
     LazyColumn(
-        state = listState, modifier = Modifier.fillMaxSize()
+        state = listState, modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
     ) {
         items(articles) {
             ArticleListItem(article = it, articles.indexOf(it), navController = navController)
@@ -140,7 +174,9 @@ fun ItemImage(url: String) {
         fallback = painterResource(R.drawable.istockphoto_1147544807_612x612),
         placeholder = painterResource(R.drawable.istockphoto_1147544807_612x612),
         contentScale = ContentScale.Inside,
-        modifier = Modifier.fillMaxSize(0.3F)
+        modifier = Modifier
+            .fillMaxSize(0.3F)
+            .wrapContentHeight(Alignment.CenterVertically)
     )
 }
 
@@ -162,6 +198,8 @@ private fun ItemDescription(description: String) {
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun NewsArticleListPreview() {
+    val refreshState = rememberPullRefreshState(refreshing = false, onRefresh = { })
+
     NewsArticleList(articles = listOf(
         Article(
             author = null,
@@ -182,5 +220,9 @@ fun NewsArticleListPreview() {
             url = "https://duckduckgo.com/?q=sonet",
             urlToImage = null
         )
-    ), LazyListState(), navController = NavHostController(LocalContext.current), onEndReached = {})
+    ),
+        LazyListState(),
+        navController = NavHostController(LocalContext.current),
+        pullRefreshState = refreshState,
+        onEndReached = {})
 }

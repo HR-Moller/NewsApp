@@ -16,17 +16,17 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
     override val articles: StateFlow<List<Article>>
         get() = _articles.asStateFlow()
 
-    private var lastRetrievedPage = 1
+    private var nextPage = 1
     override suspend fun fetchTopHeadlines(): NewsArticleResult {
         var result: NewsArticleResult = NewsArticleResult.Error()
 
         return try {
-            val res = newsApiService.getTopHeadlinesPage(lastRetrievedPage)
+            val res = newsApiService.getTopHeadlinesPage(nextPage)
 
             when (res.isSuccessful) {
                 true -> {
                     _articles.value = res.body()?.articles!!.filter { it.title != "[Removed]" }.toMutableList()
-                    lastRetrievedPage++
+                    nextPage++
                     result = NewsArticleResult.Success
                 }
 
@@ -52,12 +52,12 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
         var result: NewsArticleResult = NewsArticleResult.Error()
 
         return try {
-            val res = newsApiService.getTopHeadlinesPage(lastRetrievedPage)
+            val res = newsApiService.getTopHeadlinesPage(nextPage)
 
             when (res.isSuccessful) {
                 true -> {
                     _articles.value += res.body()?.articles!!.filter { it.title != "[Removed]" }.toMutableList()
-                    lastRetrievedPage++
+                    nextPage++
                     result = NewsArticleResult.Success
                 }
 
@@ -83,5 +83,10 @@ class NewsArticleRepositoryImpl @Inject constructor(private val newsApiService: 
             null -> Result.failure(Exception("Article Not Found"))
             else -> Result.success(art)
         }
+    }
+
+    override suspend fun refreshTopHeadlines(): NewsArticleResult {
+        nextPage = 1
+        return fetchTopHeadlines()
     }
 }

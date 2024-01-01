@@ -10,4 +10,5 @@ interface NewsArticleRepository {
     suspend fun fetchTopHeadlines(): NewsArticleResult
     suspend fun fetchAdditionalTopHeadlines(): NewsArticleResult
     suspend fun getArticleByIndex(index: Int): Result<Article>
+    suspend fun refreshTopHeadlines(): NewsArticleResult
 }
