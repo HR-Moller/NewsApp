@@ -11,7 +11,6 @@ import javax.inject.Inject
 @HiltViewModel
 class NewsArticleListViewModel @Inject constructor(private val newsArticleRepository: NewsArticleRepository) :
         StateViewModel<NewsArticleListState>(NewsArticleListState.initial()) {
-
     init {
         viewModelScope.launch {
 
@@ -24,6 +23,19 @@ class NewsArticleListViewModel @Inject constructor(private val newsArticleReposi
             }
             newsArticleRepository.articles.collect { value ->
                 _state.value = _state.value.copy(data = value)
+            }
+        }
+    }
+
+    fun onRefresh() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isRefreshing = true)
+            when (val result = newsArticleRepository.refreshTopHeadlines()) {
+                is NewsArticleResult.Error -> _state.value = _state.value.copy(
+                    isLoading = false, error = true, errorMessage = result.message
+                )
+
+                NewsArticleResult.Success -> _state.value = _state.value.copy(isRefreshing = false)
             }
         }
     }
@@ -44,9 +56,15 @@ class NewsArticleListViewModel @Inject constructor(private val newsArticleReposi
 }
 
 data class NewsArticleListState(
-    val isLoading: Boolean, val data: List<Article>, val error: Boolean, val errorMessage: String?
+    val isLoading: Boolean,
+    val data: List<Article>,
+    val error: Boolean,
+    val errorMessage: String?,
+    val isRefreshing: Boolean
 ) : UiState {
     companion object {
-        fun initial() = NewsArticleListState(isLoading = true, data = emptyList(), error = false, errorMessage = null)
+        fun initial() = NewsArticleListState(
+            isLoading = true, data = emptyList(), error = false, errorMessage = null, isRefreshing = false
+        )
     }
 }
